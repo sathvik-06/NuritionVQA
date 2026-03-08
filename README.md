@@ -144,3 +144,11 @@ print(answer)
 
 # To run RAG locally without billing using LLaVA and OLLAMA
  https://ollama.com install OLLAMA from this website 
+ # without installing OLLAMA
+1)Open PowerShell as Administrator.
+2)Run this exactly:
+irm https://ollama.com/install.ps1 | iex
+3)When it finishes, verify the install:
+ollama --version
+4)Then pull the LLaVA model:
+ollama pull llava
