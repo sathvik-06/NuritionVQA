@@ -141,3 +141,6 @@ print(answer)
 | `rag/prompts.py` | System and user prompts |
 | `run_rag.py` | CLI and demo script |
 
+
+# To run RAG locally without billing using LLaVA and OLLAMA
+ https://ollama.com install OLLAMA from this website 
