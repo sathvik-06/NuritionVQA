@@ -2,7 +2,7 @@
  * NutritionVQA-RAG — Frontend Application Logic
  */
 
-window.API_BASE = window.API_BASE || window.location.origin;
+window.API_BASE = "https://sathvik-cs-nutrition-vqa-backend.hf.space";
 var API_BASE = window.API_BASE;
 
 // ─── DOM Refs ────────────────────────────────────────────────────

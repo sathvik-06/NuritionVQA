@@ -3,7 +3,7 @@
  * Chart.js powered nutrition trend analytics with weekly/monthly views.
  */
 
-var API_BASE = window.location.origin;
+var API_BASE = "https://sathvik-cs-nutrition-vqa-backend.hf.space";
 let calorieChart = null;
 let macroChart = null;
 let scoreChart = null;

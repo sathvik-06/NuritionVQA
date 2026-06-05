@@ -4,7 +4,7 @@
  * daily intake, product comparison, health verdict, and gamification.
  */
 
-var API_BASE = window.location.origin;
+var API_BASE = "https://sathvik-cs-nutrition-vqa-backend.hf.space";
 
 // ─── DOM refs ───────────────────────────────────────────────────
 const dropZone        = document.getElementById("drop-zone");

@@ -4,7 +4,7 @@
  */
 
 // Global API configuration shared across scripts
-window.API_BASE = window.API_BASE || window.location.origin;
+window.API_BASE = "https://sathvik-cs-nutrition-vqa-backend.hf.space";
 var API_BASE = window.API_BASE;
 
 // ─── Global Fetch Interceptor (401 → auto-redirect to login) ────
