@@ -33,26 +33,15 @@ async def signup(user_data: UserSignup):
     if existing_user:
         raise HTTPException(status_code=400, detail="An account already exists with this Gmail. Please sign in.")
     
-    # 2FA: Generate and send OTP for signup
-    otp = str(random.randint(100000, 999999))
-    user_mobile = user_data.mobile
+    hashed_password = get_password_hash(user_data.password)
+    user_doc = user_data.dict()
+    user_doc["password"] = hashed_password
+    user_doc["created_at"] = datetime.utcnow()
     
-    await db.otp_tokens.replace_one(
-        {"mobile": user_mobile},
-        {"mobile": user_mobile, "otp": otp, "expires_at": datetime.utcnow() + timedelta(minutes=10)},
-        upsert=True
-    )
+    result = await db.users.insert_one(user_doc)
+    user_id = str(result.inserted_id)
     
-    success = twilio_service and await twilio_service.send_otp(user_mobile, otp)
-    if not success:
-        logger.warning(f"OTP FALLBACK FOR SIGNUP {user_mobile}: {otp}")
-        return {
-            "message": "OTP generated. If SMS was not received, check server logs.",
-            "require_otp": True,
-            "dev_otp": otp if settings.DEBUG else None
-        }
-        
-    return {"message": "Verification code sent to your mobile", "require_otp": True}
+    return {"message": "Signup successful", "require_otp": False, "user_id": user_id}
 
 
 @router.post("/verify-signup-otp")
@@ -96,29 +85,8 @@ async def signin(user_data: UserSignin):
         logger.warning(f"Signin failed: invalid password for {user_data.login}")
         raise HTTPException(status_code=401, detail="Invalid password")
         
-    # 2FA: Generate and send OTP for signin
-    otp = str(random.randint(100000, 999999))
-    user_mobile = user.get("mobile", "N/A")
-        
-    await db.otp_tokens.replace_one(
-        {"mobile": user_mobile},
-        {"mobile": user_mobile, "otp": otp, "expires_at": datetime.utcnow() + timedelta(minutes=10)},
-        upsert=True
-    )
-    
-    success = False
-    if user_mobile != "N/A":
-        success = twilio_service and await twilio_service.send_otp(user_mobile, otp)
-        
-    if not success:
-        logger.warning(f"OTP FALLBACK FOR SIGNIN {user_mobile}: {otp}")
-        return {
-            "message": "OTP generated. Since no mobile is linked or Twilio failed, use the Dev OTP.",
-            "require_otp": True,
-            "dev_otp": otp
-        }
-        
-    return {"message": "Verification code sent to your mobile", "require_otp": True}
+    access_token = create_access_token(data={"sub": user["email"]})
+    return {"access_token": access_token, "token_type": "bearer", "require_otp": False}
 
 
 @router.post("/verify-signin-otp", response_model=Token)
@@ -184,7 +152,10 @@ async def forgot_password(req: ForgotPasswordRequest):
             "dev_otp": otp if settings.DEBUG else None,
         }
         
-    return {"message": "OTP sent to your registered mobile number"}
+    return {
+        "message": "OTP sent to your registered mobile number",
+        "dev_otp": otp if settings.DEBUG else None
+    }
 
 @router.post("/verify-otp")
 async def verify_otp(req: VerifyOTPRequest):
@@ -235,15 +206,23 @@ async def send_google_otp(data: dict):
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
     
+    mobile = data.get("mobile")
+    
     db = await get_async_db()
     user = await db.users.find_one({"email": email})
     
-    if not user:
-        raise HTTPException(status_code=401, detail="No account found for this Gmail. Please sign up first.")
-    
-    mobile = user.get("mobile")
+    if user:
+        db_mobile = user.get("mobile")
+        if db_mobile and db_mobile != "N/A":
+            mobile = db_mobile
+            
     if not mobile or mobile == "N/A":
-        raise HTTPException(status_code=400, detail="No mobile number linked to this account for 2FA. Please update your profile.")
+        # Fallback if no mobile is provided or found
+        otp = str(random.randint(100000, 999999))
+        return {
+            "message": "No mobile number linked. Use Dev OTP.",
+            "dev_otp": otp if settings.DEBUG else None
+        }
 
     otp = str(random.randint(100000, 999999))
     
@@ -263,7 +242,10 @@ async def send_google_otp(data: dict):
             "dev_otp": otp if settings.DEBUG else None,
         }
     
-    return {"message": "Verification code sent to your mobile via Twilio"}
+    return {
+        "message": "Verification code sent to your mobile via Twilio",
+        "dev_otp": otp if settings.DEBUG else None
+    }
 
 from pydantic import BaseModel
 
